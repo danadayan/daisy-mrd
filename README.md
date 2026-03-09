@@ -86,10 +86,15 @@ pip install daisy-mrd
 ```python
 from daisy_mrd import run_lspv_pipeline
 
-result = run_lspv_pipeline(
-    vcf_path="patient_001_diagnosis.vcf",
-    output_dir="results/patient_001/",
-    patient_id="001",
+lspv_result = run_lspv_pipeline(
+    vcf_path                = DIAGNOSIS_VCF,
+    output_dir              = f"results/{PATIENT_ID}/lspv/",
+    patient_id              = PATIENT_ID,
+
+    run_vep_annotation      = False, # False for annotated files, True if annotation required
+    vcf_is_filtered         = True,  # True for filtered (FILTER == PASS)
+    vcf_is_gnomad_annotated = True,  # True if gnomad annotation exist
+    
 )
 
 print(result.summary)
@@ -106,17 +111,44 @@ result.fig_pie.show()     # Clonal vs sub-clonal pie chart
 ```python
 from daisy_mrd import run_mrd_single
 
-mrd = run_mrd_single(
-    lspv_csv="results/patient_001/001_lspvs.csv",
-    remission_bam="patient_001_remission.cram",
-    reference="GRCh38.fa",
-    output_dir="results/patient_001/mrd/",
-    patient_id="001",
-)
+mrd_result = run_mrd_single(
+    lspv_csv       = lspv_csv,          # output from Step 1
+    remission_bam  = REMISSION_CRAM,
+    reference      = HUMAN_REFERENCE_GENOME,
+    output_dir     = f"results/{PATIENT_ID}/mrd/",
+    patient_id     = PATIENT_ID,
 
-print(f"DAISY-MRD score: {mrd.score.score:.2e}")
-# DAISY-MRD score: 3.41e-04
+    samtools_path  = "/opt/anaconda3/bin/samtools",
+
+    # Use the built-in Panel of Normals for noise filtering
+    pon_path       = None,
+    twobit_path  = "/data/hg38.2bit")
+
+
+print(f"DAISY-MRD score : {mrd_result.score.score:.2e}")
+print(f"Alt reads       : {mrd_result.score.total_alt_reads}")
+print(f"Total depth     : {mrd_result.score.total_read_depth}")
+print(f"LSPV positions  : {mrd_result.score.n_lspv_positions}")
 ```
+**Output files:**
+
+```
+results/001/mrd/
+├── 001_remission.pileup
+├── 001_pileup.csv
+├── 001_read_counts.csv
+├── 001_filter_summary.csv
+├── 001_daisy_mrd_score.csv
+└── filter_layers/
+    ├── no_filters/
+    ├── filter_ct/
+    ├── no_xy/
+    ├── no_xy_no_200/
+    ├── no_xy_no_germline/
+    ├── no_xy_no_germline_no_pon/
+    └── no_xy_no_germline_no_pon_no_hVAF/   ← used for final score
+```
+
 
 ### Running a cohort
 
@@ -147,101 +179,6 @@ scores_df.to_csv("daisy_mrd_scores.csv", index=False)
 
 ---
 
-## Full API Reference
-
-### `run_lspv_pipeline()`
-
-```python
-result = run_lspv_pipeline(
-    # Required
-    vcf_path        = "diagnosis.vcf",   # Diagnosis VCF (plain or .vcf.gz)
-    output_dir      = "results/",        # Created if absent
-
-    # Label
-    patient_id      = "001",             # Used in filenames and plot titles
-
-    # VEP annotation (optional — skip if VCF already annotated)
-    run_vep_annotation     = False,      # True = annotate via Docker
-    vep_assembly           = "GRCh38",   # or "GRCh37"
-    vep_use_cache          = False,      # True = offline (needs local cache)
-    vep_cache_dir          = "~/.vep",
-
-    # gnomAD germline filtering
-    gnomad_path     = None,              # Path to local chrom_pos.txt index, or None
-    gnomad_use_api  = True,              # Fall back to gnomAD GraphQL API
-
-    # Panel of Normals
-    pon_path        = None,              # None = built-in PoN; or path to custom CSV
-
-    # GMM clonality
-    gmm_max_components           = 5,
-    clonality_pvalue_threshold   = 0.05,
-
-    # Input already PASS-filtered?
-    vcf_is_filtered = False,
-)
-```
-
-**Returns `LspvResult`:**
-
-| Attribute | Type | Description |
-|---|---|---|
-| `lspvs` | `pd.DataFrame` | Final LSPV table |
-| `all_variants` | `pd.DataFrame` | All variants with clonality labels |
-| `summary` | `pd.DataFrame` | Variant counts at each step |
-| `fig_gmm` | `Figure` | GMM plot |
-| `fig_pie` | `Figure` | Clonal/subclonal pie chart |
-| `clonal_peak_mean` | `float` | Mean VAF of the clonal peak |
-| `output_dir` | `Path` | Directory of saved outputs |
-
-**Output files:**
-
-```
-results/
-├── 001_pass.vcf                  # PASS-filtered VCF
-├── 001_gnomad.vcf                # gnomAD-annotated VCF
-├── 001_lspvs.csv                 # ← LSPVs (input to Step 2)
-├── 001_summary.csv               # Variant counts
-├── 001_gmm.pdf                   # GMM plot
-└── 001_clonality_pie.pdf         # Pie chart
-```
-
----
-
-### `run_mrd_single()`
-
-```python
-mrd = run_mrd_single(
-    # Required
-    lspv_csv        = "results/001/001_lspvs.csv",
-    remission_bam   = "001_remission.cram",
-    reference       = "GRCh38.fa",
-    output_dir      = "results/001/mrd/",
-
-    # Label
-    patient_id      = "001",
-
-    # samtools
-    samtools_path         = "samtools",  # Full path if not on $PATH
-    extra_mpileup_flags   = None,        # e.g. ["--min-BQ", "20"]
-
-    # Skip mpileup if pileup file already exists
-    pileup_file     = None,              # Path to pre-computed .pileup
-
-    # Panel of Normals
-    pon_path        = None,              # None = built-in PoN
-
-    # Context filter (needs twobitreader + a .2bit genome file)
-    twobit_path     = None,              # e.g. "/data/hg38.2bit"
-
-    # Filter thresholds (all optional — defaults match the paper)
-    max_depth                    = 200,
-    germline_pvalue_threshold    = 0.01,
-    pon_pvalue_threshold         = 0.05,
-    max_vaf                      = 0.05,
-    use_noise_pvalue_filter      = True,
-)
-```
 
 **Returns `MrdResult`:**
 
@@ -253,24 +190,6 @@ mrd = run_mrd_single(
 | `fig_noise` | `Figure` or `None` | Noise distribution plot (populated by cohort run) |
 | `output_dir` | `Path` | Directory of saved outputs |
 
-**Output files:**
-
-```
-results/001/mrd/
-├── 001_remission.pileup
-├── 001_pileup.csv
-├── 001_read_counts.csv
-├── 001_filter_summary.csv
-├── 001_daisy_mrd_score.csv
-└── filter_layers/
-    ├── no_filters/
-    ├── filter_ct/
-    ├── no_xy/
-    ├── no_xy_no_200/
-    ├── no_xy_no_germline/
-    ├── no_xy_no_germline_no_pon/
-    └── no_xy_no_germline_no_pon_no_hVAF/   ← used for final score
-```
 
 ---
 
@@ -361,24 +280,10 @@ daisy-mrd/
 │       ├── pileup.py            # samtools mpileup + pileup parser
 │       ├── readcount.py         # ALT read counting from pileup strings
 │       └── score.py             # Score calculation + noise plots
-├── tests/
-│   ├── test_filter.py
-│   ├── test_gmm.py
-│   └── test_mrd.py
 ├── LICENSE
 ├── CONTRIBUTING.md
 └── pyproject.toml
 ```
-
----
-
-## Running tests
-
-```bash
-pip install -e ".[dev]"
-pytest
-```
-
 ---
 
 ## Citation
