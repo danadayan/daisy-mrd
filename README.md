@@ -118,7 +118,7 @@ mrd_result = run_mrd_single(
     output_dir     = f"results/{PATIENT_ID}/mrd/",
     patient_id     = PATIENT_ID,
 
-    samtools_path  = "/opt/anaconda3/bin/samtools",
+    samtools_path  = "/samtools",
 
     # Use the built-in Panel of Normals for noise filtering
     pon_path       = None,
