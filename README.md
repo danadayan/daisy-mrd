@@ -53,7 +53,7 @@ pip install -e .
 ### PyPI
 
 ```bash
-pip install daisy-mrd
+pip install daisy-mrd==0.1.1
 ```
 
 ### Requirements
