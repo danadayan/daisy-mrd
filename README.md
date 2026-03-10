@@ -287,7 +287,7 @@ daisy-mrd/
 
 ## Citation
 
-If you use DAISY-MRD in your research, please cite:
+If you use daisy-mrd in your research, please cite:
 
 ```
 ```
