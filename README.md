@@ -42,7 +42,7 @@ Diagnosis WGS (VCF)                 Remission BAM/CRAM
 
 ## Installation
 
-### From GitHub
+### GitHub
 
 ```bash
 git clone https://github.com/maruvka-lab/daisy-mrd.git
@@ -50,7 +50,7 @@ cd daisy-mrd
 pip install -e .
 ```
 
-### From PyPI
+### PyPI
 
 ```bash
 pip install daisy-mrd
