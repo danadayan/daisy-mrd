@@ -264,23 +264,24 @@ def run_lspv_pipeline(
     df = apply_hard_filters(df)
 
     # ------------------------------------------------------------------
-    # Step 5: Extract reads and VAF
+    # Step 5: Extract reads (depth + alt counts)
     # ------------------------------------------------------------------
-    log.info("[%s] Extracting read depth and VAF", label)
+    log.info("[%s] Extracting read depth and alt counts", label)
     df = get_reads(df)
-    df, vaf_values = get_vaf(df)
 
     # ------------------------------------------------------------------
     # Step 6: Panel of Normals filter
+    # (must happen BEFORE get_vaf, matching original script order:
+    #  get_reads -> filter_pon -> get_vaf -> GMM)
     # ------------------------------------------------------------------
     resolved_pon = resolve_pon_path(pon_path)
     log.info("[%s] Loading PoN from %s", label, resolved_pon)
     pon = load_pon(resolved_pon)
 
-    log.info("[%s] Applying PoN filter (p ≤ %.3f)", label, pon_pvalue_threshold)
+    log.info("[%s] Applying PoN filter (p <= %.3f)", label, pon_pvalue_threshold)
     df = filter_pon(df, pon, pvalue_threshold=pon_pvalue_threshold)
 
-    # Refresh VAF values after PoN filtering
+    # Extract VAF AFTER PoN filtering - matches original process_file() order
     df, vaf_values = get_vaf(df)
 
     # ------------------------------------------------------------------
