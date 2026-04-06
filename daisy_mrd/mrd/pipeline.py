@@ -119,7 +119,6 @@ def run_mrd_single(
     max_depth: int = 200,
     germline_pvalue_threshold: float = 0.01,
     pon_pvalue_threshold: float = 0.05,
-    max_vaf: float = 0.05,
     use_noise_pvalue_filter: bool = True,
     # skip mpileup if pileup file already exists
     pileup_file: str | Path | None = None,
@@ -156,8 +155,6 @@ def run_mrd_single(
         Binomial p-value threshold for germline filtering. Default: 0.01.
     pon_pvalue_threshold : float
         Binomial p-value threshold for PoN filtering. Default: 0.05.
-    max_vaf : float
-        Maximum VAF allowed in the final filter layer. Default: 0.05.
     use_noise_pvalue_filter : bool
         If ``True``, restrict the MRD numerator to positions with
         ``noise_pvalue < 0.05`` (requires PoN filter to have run).
@@ -243,7 +240,6 @@ def run_mrd_single(
         max_depth=max_depth,
         germline_pvalue_threshold=germline_pvalue_threshold,
         pon_pvalue_threshold=pon_pvalue_threshold,
-        max_vaf=max_vaf,
     )
 
     filter_summary_csv = out_dir / f"{label}_filter_summary.csv"
